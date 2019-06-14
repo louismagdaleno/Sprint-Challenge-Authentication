@@ -18,52 +18,33 @@ function createJWT(payload, fn){
 }
 
 function register(req, res) {
-
-  // grab username and password from request body
-  let { username, password } = req.body;
-
-  // hash password
-  password = bcrypt.hashSync(password);
-
-  // insert into db
-  db('users').insert({ username, password: password });
-
-  // create JWT
-  createJWT({username}, (err, token) => {
-    if (err){
-      throw err;
-    } else {
-      res.status(200).json(token);
-    }
-  });
+	// implement user registration
+	const creds = req.body;
+	const hash = bcrypt.hashSync(creds.password, 10);
+	creds.password = hash;
+	db('users')
+		.insert(creds)
+		.then((ids) => {
+			res.status(201).json(ids);
+		})
+		.catch((err) => res.status(400).json(err));
 }
 
 function login(req, res) {
-  // implement user login
-  let { username, password } = req.body;
-  db('users')
-    .select('password')
-    .where('username', '=', username)
-    .first()
-    .then(hash => bcrypt.compare(password, hash.password))
-    .then((verdict) => {
-      if (verdict) {
-        makeJWT({ username }, (err, token) => {
-          if (err) {
-            throw err;
-          } else {
-            res.status(200).json(token);
-          }
-        });
-      } else {
-        res.status(402).json({ message: 'Incorrect username or password' });
-      }
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(400).json({ message: 'We cant log you in right now, please try again later' });
-    });
-
+	// implement user login
+	const creds = req.body;
+	db('users')
+		.where({ username: creds.username })
+		.first()
+		.then((user) => {
+			if (user && bcrypt.compareSync(creds.password, user.password)) {
+				const token = generateToken(user);
+				res.status(200).json({ message: 'Welcome!', token });
+			} else {
+				res.status(401).json({ message: 'you shall not pass!!' });
+			}
+		})
+		.catch((err) => res.status(400).json(err));
 }
 
 function getJokes(req, res) {

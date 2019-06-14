@@ -2,6 +2,7 @@ const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('knex')(require('../knexfile').development);
+const jwtKey = process.env.JWT_KEY;
 
 
 
@@ -13,8 +14,16 @@ module.exports = server => {
   server.get('/api/jokes', authenticate, getJokes);
 };
 
-function createJWT(payload, fn){
-  jwt.sign(payload, jwtKey, { expiresIn: '1h' }, fn);
+function generateToken(user){
+  const payload = {
+		userId: user.id,
+		username: user.username
+	};
+	const secret = jwtKey;
+	const options = {
+		expiresIn: '1h'
+	};
+	return jwt.sign(payload, secret, options);
 }
 
 function register(req, res) {
